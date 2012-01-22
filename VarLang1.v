@@ -94,12 +94,10 @@ Example test_not_closed:
   ~ (closed (Var 0)).
 Proof. unfold not. intro H. inversion H. Qed.
 
-(* TODO: get rid of magic constants in the proof, once you know how to. *)
 Theorem foldConstants_complete : forall e, closed e -> exists n, foldConstants e = (Const n).
 Proof.
-  induction e; intro H; inversion H; crush.
-    exists n; reflexivity.
-    destruct b; crush.
-      exists (x0 + x); reflexivity.
-      exists (x0 * x); reflexivity.
+  induction e; intro H; inversion H; try destruct b; crush;
+    match goal with
+      | [ |- exists n, Const ?X = Const n ] => exists X
+    end; reflexivity.
 Qed.
