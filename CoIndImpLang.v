@@ -1,5 +1,5 @@
 (*
-Excerpt taken from http://adam.chlipala.net/cpdt/html/Coinductive.html#lab34
+Excerpt taken from http://adam.chlipala.net/cpdt/html/Coinductive.html#var
 Extended by adding an %\texttt{%#<tt>#if#</tt>#%}% command construct
 *)
 
