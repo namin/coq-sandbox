@@ -1,3 +1,8 @@
+(*
+Excerpt taken from http://adam.chlipala.net/cpdt/html/Coinductive.html#lab34
+Extended by adding an %\texttt{%#<tt>#if#</tt>#%}% command construct
+*)
+
 (* begin hide *)
 Require Import CpdtTactics.
 Set Implicit Arguments.
@@ -37,7 +42,8 @@ Fixpoint evalExp (vs : vars) (e : exp) : nat :=
 Inductive cmd : Set :=
 | Assign : var -> exp -> cmd
 | Seq : cmd -> cmd -> cmd
-| While : exp -> cmd -> cmd.
+| While : exp -> cmd -> cmd
+| If : exp -> cmd -> cmd -> cmd.
 
 (** We could define an inductive relation to characterize the results of command evaluation.  However, such a relation would not capture %\emph{%#<i>#nonterminating#</i>#%}% executions.  With a co-inductive relation, we can capture both cases.  The parameters of the relation are an initial state, a command, and a final state.  A program that does not terminate in a particular initial state is related to %\emph{%#<i>#any#</i>#%}% final state. *)
 
@@ -51,7 +57,13 @@ CoInductive evalCmd : vars -> cmd -> vars -> Prop :=
 | EvalWhileTrue : forall vs1 vs2 vs3 e c, evalExp vs1 e <> 0
   -> evalCmd vs1 c vs2
   -> evalCmd vs2 (While e c) vs3
-  -> evalCmd vs1 (While e c) vs3.
+  -> evalCmd vs1 (While e c) vs3
+| EvalIfTrue : forall vs1 vs2 e c1 c2, evalExp vs1 e <> 0
+  -> evalCmd vs1 c1 vs2
+  -> evalCmd vs1 (If e c1 c2) vs2
+| EvalIfFalse : forall vs1 vs2 e c1 c2, evalExp vs1 e = 0
+  -> evalCmd vs1 c2 vs2
+  -> evalCmd vs1 (If e c1 c2) vs2.
 
 (** Having learned our lesson in the last section, before proceeding, we build a co-induction principle for [evalCmd]. *)
 
@@ -68,6 +80,10 @@ Section evalCmd_coind.
     -> (evalExp vs1 e = 0 /\ vs3 = vs1)
     \/ exists vs2, evalExp vs1 e <> 0 /\ R vs1 c vs2 /\ R vs2 (While e c) vs3.
 
+  Hypothesis IfCase : forall vs1 vs2 e c1 c2, R vs1 (If e c1 c2) vs2
+    -> (evalExp vs1 e <> 0 /\ R vs1 c1 vs2)
+    \/ (evalExp vs1 e = 0 /\ R vs1 c2 vs2).
+
   (** The proof is routine.  We make use of a form of %\index{tactics!destruct}%[destruct] that takes an %\index{intro pattern}\emph{%#<i>#intro pattern#</i>#%}% in an [as] clause.  These patterns control how deeply we break apart the components of an inductive value, and we refer the reader to the Coq manual for more details. *)
 
   Theorem evalCmd_coind : forall vs1 c vs2, R vs1 c vs2 -> evalCmd vs1 c vs2.
@@ -76,6 +92,8 @@ Section evalCmd_coind.
     destruct (SeqCase H) as [? [? ?]]; econstructor; eauto.
     destruct (WhileCase H) as [[? ?] | [? [? [? ?]]]]; subst;
       [ econstructor | econstructor 4 ]; eauto.
+    destruct (IfCase H) as [[? ?] | [? ?]];
+      [ econstructor | econstructor 6 ]; eauto.
   Qed.
 End evalCmd_coind.
 
@@ -93,6 +111,7 @@ Fixpoint optCmd (c : cmd) : cmd :=
     | Assign v e => Assign v (optExp e)
     | Seq c1 c2 => Seq (optCmd c1) (optCmd c2)
     | While e c => While (optExp e) (optCmd c)
+    | If e c1 c2 => If (optExp e) (optCmd c1) (optCmd c2)
   end.
 
 (** Before proving correctness of [optCmd], we prove a lemma about [optExp].  This is where we have to do the most work, choosing pattern match opportunities automatically. *)
