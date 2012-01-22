@@ -79,3 +79,27 @@ Theorem foldConstants_correct : forall vs e, expDenote vs (foldConstants e) = ex
                                | Binop _ _ _ => _ end] ] => destruct E
             end; crush).
 Qed.
+
+Inductive closed : exp -> Prop :=
+| ClosedConst : forall n, closed (Const n)
+| ClosedBinop : forall b e1 e2, closed e1 -> closed e2 -> closed (Binop b e1 e2).
+
+Hint Constructors closed.
+
+Example test_closed:
+  closed (Binop Plus (Binop Plus (Const 1) (Const 2)) (Const 3)).
+Proof. auto. Qed.
+
+Example test_not_closed:
+  ~ (closed (Var 0)).
+Proof. unfold not. intro H. inversion H. Qed.
+
+(* TODO: get rid of magic constants in the proof, once you know how to. *)
+Theorem foldConstants_complete : forall e, closed e -> exists n, foldConstants e = (Const n).
+Proof.
+  induction e; intro H; inversion H; crush.
+    exists n; reflexivity.
+    destruct b; crush.
+      exists (x0 + x); reflexivity.
+      exists (x0 * x); reflexivity.
+Qed.
