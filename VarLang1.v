@@ -54,3 +54,28 @@ Example test_var:
   expDenote (set vs0 0 1) (Binop Plus (Var 0) (Var 0)) = 2.
 Proof. auto. Qed.
 
+Fixpoint foldConstants (e : exp) : exp :=
+  match e with
+    | Binop b e1 e2 =>
+      match (foldConstants e1), (foldConstants e2) with
+        | (Const n1), (Const n2) => Const ((binopDenote b) n1 n2)
+        | e1', e2' => Binop b e1' e2'
+      end
+    | _ => e
+  end.
+
+Example test_fold_constants:
+  foldConstants (Binop Plus (Const 1) (Const 2)) = Const 3.
+Proof. simpl. reflexivity. Qed.
+
+Example test_fold_constants_nested:
+  foldConstants (Binop Plus (Binop Plus (Const 1) (Const 2)) (Const 3)) = Const 6.
+Proof. simpl. reflexivity. Qed.
+
+Theorem foldConstants_correct : forall vs e, expDenote vs (foldConstants e) = expDenote vs e.
+  induction e; crush;
+    repeat (match goal with
+              | [ |- context[match ?E with Const _ => _ | Var _ => _
+                               | Binop _ _ _ => _ end] ] => destruct E
+            end; crush).
+Qed.
