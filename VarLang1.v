@@ -96,7 +96,11 @@ Proof. unfold not. intro H. inversion H. Qed.
 
 Theorem foldConstants_complete : forall e, closed e -> exists n, foldConstants e = (Const n).
 Proof.
-  induction e; intro H; inversion H; try destruct b; crush;
+  induction e; intro H; inversion H;
+    try (match goal with
+      | [ |- context[Binop ?B _ _] ] => destruct B
+    end);
+    crush;
     match goal with
       | [ |- exists n, Const ?X = Const n ] => exists X
     end; reflexivity.
