@@ -1,5 +1,5 @@
 (**
-Exercies from http://adam.chlipala.net/cpdt/html/Subset.html
+Exercises from http://adam.chlipala.net/cpdt/html/Subset.html
 *)
 
 Require Import Arith.
@@ -68,3 +68,5 @@ Definition negate : forall p : prop, {p' : prop | forall truth, propDenote truth
   refine (fun p => [ negateProp p ]).
     intro truth. destruct (decide truth p); induction p; crush.
 Defined.
+
+(** Ex 3 in dpll.v *)
