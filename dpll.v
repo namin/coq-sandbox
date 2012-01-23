@@ -283,7 +283,7 @@ Fixpoint formulaLits (fm : formula) : list lit :=
 Definition simpleSat: forall (bound : nat) (fm : formula),
   option ({al : alist | satFormula fm (interp_alist al)}
     + {forall a, ~satFormula fm a}).
-  refine (fix rec (bound : nat) (fm : formula)
+  refine (fix simpleSat (bound : nat) (fm : formula)
     : option ({al : alist | satFormula fm (interp_alist al)}
       + {forall a, ~satFormula fm a}) :=
     match bound with
@@ -295,15 +295,15 @@ Definition simpleSat: forall (bound : nat) (fm : formula),
           | (l::_)::_ =>
             match setFormula fm l with
               | [|| fm' ||] =>
-                match rec bound' fm' with
+                match simpleSat bound' fm' with
                   | None => None
                   | Some [|| al ||] => Some [|| l :: al ||]
                   | Some !! =>
                     match setFormula fm (negate l) with
                       | [|| fm' ||] =>
-                        match rec bound' fm' with
+                        match simpleSat bound' fm' with
                           | None => None
-                          | Some [|| al ||] => Some [|| l :: al ||]
+                          | Some [|| al ||] => Some [|| (negate l) :: al ||]
                           | Some !! => Some !!
                         end
                       | !! => Some !!
@@ -312,9 +312,9 @@ Definition simpleSat: forall (bound : nat) (fm : formula),
               | !! =>
                 match setFormula fm (negate l) with
                   | [|| fm' ||] =>
-                    match rec bound' fm' with
+                    match simpleSat bound' fm' with
                       | None => None
-                      | Some [|| al ||] => Some [|| l :: al ||]
+                      | Some [|| al ||] => Some [|| (negate l) :: al ||]
                       | Some !! => Some !!
                     end
                   | !! => Some !!
