@@ -280,6 +280,52 @@ Fixpoint formulaLits (fm : formula) : list lit :=
     | cl::fm' => cl ++ formulaLits fm'
   end.
 
+Definition simpleSat: forall (bound : nat) (fm : formula),
+  option ({al : alist | satFormula fm (interp_alist al)}
+    + {forall a, ~satFormula fm a}).
+  refine (fix rec (bound : nat) (fm : formula)
+    : option ({al : alist | satFormula fm (interp_alist al)}
+      + {forall a, ~satFormula fm a}) :=
+    match bound with
+      | O => None
+      | S bound' =>
+        match fm with
+          | nil => Some [|| nil ||]
+          | nil::_ => Some !!
+          | (l::_)::_ =>
+            match setFormula fm l with
+              | [|| fm' ||] =>
+                match rec bound' fm' with
+                  | None => None
+                  | Some [|| al ||] => Some [|| l :: al ||]
+                  | Some !! =>
+                    match setFormula fm (negate l) with
+                      | [|| fm' ||] =>
+                        match rec bound' fm' with
+                          | None => None
+                          | Some [|| al ||] => Some [|| l :: al ||]
+                          | Some !! => Some !!
+                        end
+                      | !! => Some !!
+                    end
+                end
+              | !! =>
+                match setFormula fm (negate l) with
+                  | [|| fm' ||] =>
+                    match rec bound' fm' with
+                      | None => None
+                      | Some [|| al ||] => Some [|| l :: al ||]
+                      | Some !! => Some !!
+                    end
+                  | !! => Some !!
+                end
+            end
+        end
+    end).
+  (* TODO *)
+  Admitted.
+
+
 (** Challenge 3: Write this code that either finds a unit clause in a formula
   or declares that there are none.
   *)
