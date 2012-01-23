@@ -274,10 +274,12 @@ Fixpoint interp_alist (al : alist) : asgn :=
     | l :: al' => upd (interp_alist al') l
   end.
 
-Fixpoint formulaLits (fm : formula) : list lit :=
+(** An arbitrary heuristic to choose the next variable to split on *)
+
+Definition chooseSplit (fm : formula) :=
   match fm with
-    | nil => nil
-    | cl::fm' => cl ++ formulaLits fm'
+    | ((l :: _) :: _) => l
+    | _ => (true, 0)
   end.
 
 Definition simpleSat: forall (bound : nat) (fm : formula),
@@ -289,41 +291,61 @@ Definition simpleSat: forall (bound : nat) (fm : formula),
     match bound with
       | O => None
       | S bound' =>
-        match fm with
-          | nil => Some [|| nil ||]
-          | nil::_ => Some !!
-          | (l::_)::_ =>
-            match setFormula fm l with
-              | [|| fm' ||] =>
-                match simpleSat bound' fm' with
-                  | None => None
-                  | Some [|| al ||] => Some [|| l :: al ||]
-                  | Some !! =>
-                    match setFormula fm (negate l) with
-                      | [|| fm' ||] =>
-                        match simpleSat bound' fm' with
-                          | None => None
-                          | Some [|| al ||] => Some [|| (negate l) :: al ||]
-                          | Some !! => Some !!
-                        end
-                      | !! => Some !!
-                    end
-                end
-              | !! =>
-                match setFormula fm (negate l) with
-                  | [|| fm' ||] =>
-                    match simpleSat bound' fm' with
-                      | None => None
-                      | Some [|| al ||] => Some [|| (negate l) :: al ||]
-                      | Some !! => Some !!
-                    end
-                  | !! => Some !!
-                end
-            end
-        end
-    end).
-  (* TODO *)
-  Admitted.
+        let l := chooseSplit fm in
+          match setFormula fm l with
+            | [|| fm' ||] =>
+              match simpleSat bound' fm' with
+                | None => None
+                | Some [|| al ||] => Some [|| l :: al ||]
+                | Some !! =>
+                  match setFormula fm (negate l) with
+                    | [|| fm' ||] =>
+                      match simpleSat bound' fm' with
+                        | None => None
+                        | Some [|| al ||] => Some [|| (negate l) :: al ||]
+                        | Some !! => Some !!
+                      end
+                    | !! => Some !!
+                  end
+              end
+            | !! =>
+              match setFormula fm (negate l) with
+                | [|| fm' ||] =>
+                  match simpleSat bound' fm' with
+                    | None => None
+                    | Some [|| al ||] => Some [|| (negate l) :: al ||]
+                    | Some !! => Some !!
+                  end
+                | !! => Some !!
+              end
+          end
+    end); simpl; intros; subst; intuition; try generalize dependent (interp_alist al).
+  firstorder.
+  firstorder.
+  firstorder.
+  firstorder.
+  firstorder.
+  firstorder.
+  firstorder.
+  firstorder.
+  firstorder.
+  destruct (satLit_dec l a);
+    [assert (satFormula fm (upd a l))
+      | assert (satFormula fm (upd a (negate l)))]; firstorder.
+  firstorder.
+  destruct (satLit_dec l a);
+    [assert (satFormula fm (upd a l))
+      | assert (satFormula fm (upd a (negate l)))]; firstorder.
+  firstorder.
+  firstorder.
+  firstorder.
+  destruct (satLit_dec l a);
+    [assert (satFormula fm (upd a l))
+      | assert (satFormula fm (upd a (negate l)))]; firstorder.
+  destruct (satLit_dec l a);
+    [assert (satFormula fm (upd a l))
+      | assert (satFormula fm (upd a (negate l)))]; firstorder.
+Defined.
 
 (** Challenge 3: Write this code that either finds a unit clause in a formula
   or declares that there are none.
@@ -403,14 +425,6 @@ Eval compute in unitPropagateSimple (((false, 0) :: (false, 1) :: nil) :: ((true
 (** This section defines a DPLL SAT solver in terms of the subroutines you've
   written.
   *)
-
-(** An arbitrary heuristic to choose the next variable to split on *)
-
-Definition chooseSplit (fm : formula) :=
-  match fm with
-    | ((l :: _) :: _) => l
-    | _ => (true, 0)
-  end.
 
 (** Here's the final definition!  This is not the way you should write proof
   scripts. ;-)
