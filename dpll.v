@@ -194,3 +194,89 @@ Definition setFormula : forall (fm : formula) (l : lit),
     end); clear setFormula; magic_solver.
 Defined.
 
+Definition setFormulaSimple (fm : formula) (l : lit) :=
+  match setFormula fm l with
+    | inleft (exist fm' _) => Some fm'
+    | inright _ => None
+  end.
+
+Eval compute in setFormulaSimple nil (true, 0).
+Eval compute in setFormulaSimple (((true, 0) :: nil) :: nil) (true, 0).
+Eval compute in setFormulaSimple (((false, 0) :: nil) :: nil) (true, 0).
+Eval compute in setFormulaSimple (((false, 1) :: nil) :: nil) (true, 0).
+Eval compute in setFormulaSimple (((false, 1) :: (true, 0) :: nil) :: nil) (true, 0).
+Eval compute in setFormulaSimple (((false, 1) :: (false, 0) :: nil) :: nil) (true, 0).
+
+Hint Extern 1 False => discriminate.
+
+Hint Extern 1 False =>
+  match goal with
+    | [ H : In _ (_ :: _) |- _ ] => inversion H; clear H; subst
+  end.
+
+(** A simple SAT Solver *)
+
+Definition negate (l : lit) := (negb (fst l), snd l).
+
+Hint Unfold satFormula.
+
+Lemma satLit_dec : forall l a,
+  {satLit l a} + {satLit (negate l) a}.
+  destruct l.
+  unfold satLit; simpl; intro.
+  destruct b; destruct (a v); simpl; auto.
+Qed.
+
+(** We'll represent assignments as lists of literals instead of functions. *)
+Definition alist := list lit.
+
+Fixpoint interp_alist (al : alist) : asgn :=
+  match al with
+    | nil => fun _ => true
+    | l :: al' => upd (interp_alist al') l
+  end.
+
+Fixpoint formulaLits (fm : formula) : list lit :=
+  match fm with
+    | nil => nil
+    | cl::fm' => cl ++ formulaLits fm'
+  end.
+
+Definition findUnitClause : forall (fm : formula),
+  {l : lit | In (l :: nil) fm}
+  + {forall l, ~In (l :: nil) fm}.
+  refine (fix findUnitClause (fm : formula)
+  : {l : lit | In (l :: nil) fm}
+  + {forall l, ~In (l :: nil) fm} :=
+  match fm with
+    | nil => !!
+    | (l::nil) :: fm' => [|| l ||]
+    | _ :: fm' => fm'' <-- findUnitClause fm'; [|| fm'' ||]
+  end); clear findUnitClause; magic_solver.
+Defined.
+
+Lemma unitClauseTrue : forall l a fm,
+  In (l :: nil) fm
+  -> satFormula fm a
+  -> satLit l a.
+  induction fm; intuition.
+  inversion H; subst; simpl in H0; intuition.
+Qed.
+
+Hint Resolve unitClauseTrue.
+
+(** Unit propagation.  The return type of
+  [unitPropagate] signifies that three results are possible:
+  - [None]: There are no unit clauses.
+  - [Some (inleft _)]: There is a unit clause, and here is a formula reflecting
+    setting its literal to true.
+  - [Some (inright _)]: There is a unit clause, and propagating it reveals that
+    the formula is unsatisfiable.
+  *)
+Definition unitPropagate : forall (fm : formula), option (sigS (fun fm' : formula =>
+  {l : lit |
+    (forall a, satFormula fm a -> satLit l a)
+    /\ forall a, satFormula fm (upd a l) <-> satFormula fm' a})
++ {forall a, ~satFormula fm a}).
+(* TODO *)
+Admitted.
