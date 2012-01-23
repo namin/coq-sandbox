@@ -325,7 +325,6 @@ Definition simpleSat: forall (bound : nat) (fm : formula),
   (* TODO *)
   Admitted.
 
-
 (** Challenge 3: Write this code that either finds a unit clause in a formula
   or declares that there are none.
   *)
@@ -368,5 +367,184 @@ Definition unitPropagate : forall (fm : formula), option (sigS (fun fm' : formul
     (forall a, satFormula fm a -> satLit l a)
     /\ forall a, satFormula fm (upd a l) <-> satFormula fm' a})
 + {forall a, ~satFormula fm a}).
-(* TODO *)
-Admitted.
+refine (fun (fm : formula) =>
+  match findUnitClause fm with
+    | [|| l ||] =>
+      match setFormula fm l with
+        | [|| fm' ||] =>
+          Some (inleft _ (existS (fun fm' : formula =>
+            {l : lit |
+              (forall a, satFormula fm a -> satLit l a)
+              /\ forall a, satFormula fm (upd a l) <-> satFormula fm' a})
+          fm' (exist _ l _)))
+        | !! => Some !!
+      end
+    | !! => None
+  end); magic_solver.
+Defined.
+
+Definition unitPropagateSimple (fm : formula) :=
+  match unitPropagate fm with
+    | None => None
+    | Some (inleft (existS fm' (exist l _))) => Some (Some (fm', l))
+    | Some (inright _) => Some None
+  end.
+
+Eval compute in unitPropagateSimple nil.
+Eval compute in unitPropagateSimple (((true, 0) :: nil) :: nil).
+Eval compute in unitPropagateSimple (((true, 0) :: nil) :: ((false, 0) :: nil) :: nil).
+Eval compute in unitPropagateSimple (((true, 0) :: nil) :: ((false, 1) :: nil) :: nil).
+Eval compute in unitPropagateSimple (((true, 0) :: nil) :: ((false, 0) :: (false, 1) :: nil) :: nil).
+Eval compute in unitPropagateSimple (((false, 0) :: (false, 1) :: nil) :: ((true, 0) :: nil) :: nil).
+
+
+(** * The SAT Solver *)
+
+(** This section defines a DPLL SAT solver in terms of the subroutines you've
+  written.
+  *)
+
+(** An arbitrary heuristic to choose the next variable to split on *)
+
+Definition chooseSplit (fm : formula) :=
+  match fm with
+    | ((l :: _) :: _) => l
+    | _ => (true, 0)
+  end.
+
+(** Here's the final definition!  This is not the way you should write proof
+  scripts. ;-)
+
+  This implementation isn't #<i>#quite#</i># what you would expect, since it
+  takes an extra parameter expressing a search tree depth.  Writing the function
+  without that parameter would be trickier when it came to proving termination.
+  In practice, you can just seed the bound with one plus the number of variables
+  in the input, but the function's return type still indicates a possibility for
+  a "time-out" by returning [None].
+  *)
+Definition boundedSat: forall (bound : nat) (fm : formula),
+  option ({al : alist | satFormula fm (interp_alist al)}
+    + {forall a, ~satFormula fm a}).
+  refine (fix boundedSat (bound : nat) (fm : formula) {struct bound}
+    : option ({al : alist | satFormula fm (interp_alist al)}
+      + {forall a, ~satFormula fm a}) :=
+    match bound with
+      | O => None
+      | S bound' =>
+	if isNil fm
+	  then Some (inleft _ (exist _ nil _))
+	  else match unitPropagate fm with
+		 | Some (inleft (existS fm' (exist l _))) =>
+		   match boundedSat bound' fm' with
+		     | None => None
+		     | Some (inleft (exist al _)) => Some (inleft _ (exist _ (l :: al) _))
+		     | Some (inright _) => Some (inright _ _)
+		   end
+		 | Some (inright _) => Some (inright _ _)
+		 | None =>
+		   let l := chooseSplit fm in
+		     match setFormula fm l with
+		       | inleft (exist fm' _) =>
+			 match boundedSat bound' fm' with
+			   | None => None
+			   | Some (inleft (exist al _)) => Some (inleft _ (exist _ (l :: al) _))
+			   | Some (inright _) =>
+			     match setFormula fm (negate l) with
+			       | inleft (exist fm' _) =>
+				 match boundedSat bound' fm' with
+				   | None => None
+				   | Some (inleft (exist al _)) => Some (inleft _ (exist _ (negate l :: al) _))
+				   | Some (inright _) => Some (inright _ _)
+				 end
+			       | inright _ => Some (inright _ _)
+			     end
+			 end
+		       | inright _ =>
+			 match setFormula fm (negate l) with
+			   | inleft (exist fm' _) =>
+			     match boundedSat bound' fm' with
+			       | None => None
+			       | Some (inleft (exist al _)) => Some (inleft _ (exist _ (negate l :: al) _))
+			       | Some (inright _) => Some (inright _ _)
+			     end
+			   | inright _ => Some (inright _ _)
+			 end
+		     end
+	       end
+    end); simpl; intros; subst; intuition; try generalize dependent (interp_alist al).
+  firstorder.
+  firstorder.
+  firstorder.
+  firstorder.
+  assert (satFormula fm (upd a0 l)); firstorder.
+  assert (satFormula fm (upd a0 l)); firstorder.
+  firstorder.
+  firstorder.
+  firstorder.
+  firstorder.
+  firstorder.
+  firstorder.
+  firstorder.
+  firstorder.
+  firstorder.
+  firstorder.
+  destruct (satLit_dec l a);
+    [assert (satFormula fm (upd a l))
+      | assert (satFormula fm (upd a (negate l)))]; firstorder.
+  destruct (satLit_dec l a);
+    [assert (satFormula fm (upd a l))
+      | assert (satFormula fm (upd a (negate l)))]; firstorder.
+  destruct (satLit_dec l a);
+    [assert (satFormula fm (upd a l))
+      | assert (satFormula fm (upd a (negate l)))]; firstorder.
+  destruct (satLit_dec l a);
+    [assert (satFormula fm (upd a l))
+      | assert (satFormula fm (upd a (negate l)))]; firstorder.
+  destruct (satLit_dec l a); intuition eauto;
+    assert (satFormula fm (upd a l)); firstorder.
+  destruct (satLit_dec l a); intuition eauto;
+    assert (satFormula fm (upd a l)); firstorder.
+  firstorder.
+  firstorder.
+  destruct (satLit_dec l a); intuition eauto;
+    assert (satFormula fm (upd a (negate l))); firstorder.
+  destruct (satLit_dec l a); intuition eauto;
+    assert (satFormula fm (upd a (negate l))); firstorder.
+  destruct (satLit_dec l a);
+    [assert (satFormula fm (upd a l))
+      | assert (satFormula fm (upd a (negate l)))]; firstorder.
+Defined.
+
+Definition boundedSatSimple (bound : nat) (fm : formula) :=
+  match boundedSat bound fm with
+    | None => None
+    | Some (inleft (exist a _)) => Some (Some a)
+    | Some (inright _) => Some None
+  end.
+
+Eval compute in boundedSatSimple 100 nil.
+Eval compute in boundedSatSimple 100 (((true, 0) :: nil) :: nil).
+Eval compute in boundedSatSimple 100 (((true, 0) :: nil) :: ((false, 0) :: nil) :: nil).
+Eval compute in boundedSatSimple 100 (((true, 0) :: (false, 1) :: nil) :: ((true, 1) :: nil) :: nil).
+Eval compute in boundedSatSimple 100 (((true, 0) :: (false, 1) :: nil) :: ((true, 1) :: (false, 0) :: nil) :: nil).
+Eval compute in boundedSatSimple 100 (((true, 0) :: (false, 1) :: nil) :: ((false, 0) :: (false, 0) :: nil) :: ((true, 1) :: nil) :: nil).
+Eval compute in boundedSatSimple 100 (((false, 0) :: (true, 1) :: nil) :: ((false, 1) :: (true, 0) :: nil) :: nil).
+
+(** We can extract an OCaml version of [boundedSat]: *)
+Recursive Extraction boundedSat.
+
+(** You can test the OCaml version by saving the output of the
+  [Recursive Extraction] to a file [Sol6.ml] and grabbing the support code in
+  #<a href="Solver6.ml">#Solver6.ml#</a>#.  In the directory where you've put
+  these files, start #<tt>#ocaml#</tt># and run: [[
+#use "Sol6.ml";;
+#use "Solver6.ml";;
+]]
+  After that, you can solve SAT problems in the SATLIB format.  You can find lots
+  of examples in #<a href="http://www.cs.ubc.ca/~hoos/SATLIB/benchm.html">#the
+  SATLIB benchmark problem archive#</a>#.  My implementation is quite speedy on
+  the first few classes of formulas listed, so you should be able to test yours
+  on these real problems without much hassle.  To solve a problem in file
+  #<tt>#testXX.cnf#</tt>#, run: [[
+solve "testXX.cnf";;
+]] *)
