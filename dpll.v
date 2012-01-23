@@ -17,35 +17,51 @@ Set Implicit Arguments.
 
 Local Open Scope specif_scope.
 
+(** * Problem Definition *)
+
 Definition var := nat.
+(** We identify propositional variables with natural numbers. *)
 
 Definition lit := (bool * var)%type.
+(** A literal is a combination of a truth value and a variable. *)
 
 Definition clause := list lit. (** distjunction *)
+(** A clause is a list (disjunction) of literals. *)
 
 Definition formula := list clause. (** conjuction *)
+(** A formula is a list (conjunction) of clauses. *)
 
 Definition asgn := var -> bool.
+(** An assignment is a function from variables to their truth values. *)
 
 Definition satLit (l : lit) (a : asgn) :=
   a (snd l) = fst l.
+(** An assignment satisfies a literal if it maps it to true. *)
 
 Fixpoint satClause (cl : clause) (a : asgn) : Prop :=
   match cl with
     | nil => False
     | l :: cl' => satLit l a \/ satClause cl' a
   end.
+(** An assignment satisfies a clause if it satisfies at least one of its
+  literals.
+  *)
 
 Fixpoint satFormula (fm : formula) (a : asgn) : Prop :=
   match fm with
     | nil => True
     | cl :: fm' => satClause cl a /\ satFormula fm' a
   end.
+(** An assignment satisfies a formula if it satisfies all of its clauses. *)
 
+(** * Subroutines *)
+
+(** You'll probably want to compare booleans for equality at some point. *)
 Definition bool_eq_dec : forall (x y : bool), {x = y} + {x <> y}.
   decide equality.
 Defined.
 
+(** A literal and its negation can't be true simultaneously. *)
 Lemma contradictory_assignment : forall s l cl a,
   s <> fst l
   -> satLit l a
@@ -58,11 +74,14 @@ Qed.
 
 Hint Resolve contradictory_assignment.
 
+(** Augment an assignment with a new mapping. *)
 Definition upd (a : asgn) (l : lit) : asgn :=
   fun v : var =>
     if eq_nat_dec v (snd l)
       then fst l
       else a v.
+
+(** Some lemmas about [upd] *)
 
 Lemma satLit_upd_eq : forall l a,
   satLit l (upd a l).
@@ -102,12 +121,25 @@ Qed.
 
 Hint Resolve satLit_contra.
 
+(** Here's the tactic that I used to discharge #<i>#all#</i># proof obligations
+  in my implementations of the four functions you will define.
+  It comes with no warranty, as different implementations may lead to
+  obligations that it can't solve, or obligations that it takes 42 years to
+  solve.
+  However, if you think enough like me, each of the four definitions you fill in
+  should read like: [[
+refine some_expression_with_holes; clear function_name; magic_solver.
+]] leaving out the [clear] invocation for non-recursive function definitions.
+  *)
 Ltac magic_solver := simpl; intros; subst; intuition eauto; firstorder;
   match goal with
     | [ H1 : satLit ?l ?a, H2 : satClause ?cl ?a |- _ ] =>
       assert (satClause cl (upd a l)); firstorder
   end.
 
+(** OK, here's your first challenge.  Write this strongly-specified function to
+  update a clause to reflect the effect of making a particular literal true.
+  *)
 Definition setClause : forall (cl : clause) (l : lit),
   {cl' : clause |
     forall a, satClause cl (upd a l) <-> satClause cl' a }
@@ -143,10 +175,13 @@ Eval compute in setClauseSimple ((true, 0) :: (true, 1) :: nil) (false, 1).
 Eval compute in setClauseSimple ((true, 0) :: (false, 1) :: nil) (true, 1).
 Eval compute in setClauseSimple ((true, 0) :: (false, 1) :: nil) (false, 1).
 
+(** It's useful to have this strongly-specified nilness check. *)
 Definition isNil : forall (A : Set) (ls : list A), {ls = nil} + {True}.
   destruct ls; eauto.
 Defined.
 Implicit Arguments isNil [A].
+
+(** Some more lemmas that I found helpful.... *)
 
 Lemma satLit_idem_lit : forall l a l',
   satLit l a
@@ -176,6 +211,9 @@ Qed.
 
 Hint Resolve satLit_idem_formula.
 
+(** Challenge 2: Write this function that updates an entire formula to reflect
+  setting a literal to true.
+  *)
 Definition setFormula : forall (fm : formula) (l : lit),
   {fm' : formula |
     forall a, satFormula fm (upd a l) <-> satFormula fm' a}
@@ -242,6 +280,9 @@ Fixpoint formulaLits (fm : formula) : list lit :=
     | cl::fm' => cl ++ formulaLits fm'
   end.
 
+(** Challenge 3: Write this code that either finds a unit clause in a formula
+  or declares that there are none.
+  *)
 Definition findUnitClause : forall (fm : formula),
   {l : lit | In (l :: nil) fm}
   + {forall l, ~In (l :: nil) fm}.
@@ -255,6 +296,9 @@ Definition findUnitClause : forall (fm : formula),
   end); clear findUnitClause; magic_solver.
 Defined.
 
+(** The literal in a unit clause must always be true in a satisfying
+  assignment.
+  *)
 Lemma unitClauseTrue : forall l a fm,
   In (l :: nil) fm
   -> satFormula fm a
@@ -265,7 +309,7 @@ Qed.
 
 Hint Resolve unitClauseTrue.
 
-(** Unit propagation.  The return type of
+(** Final challenge: Implement unit propagation.  The return type of
   [unitPropagate] signifies that three results are possible:
   - [None]: There are no unit clauses.
   - [Some (inleft _)]: There is a unit clause, and here is a formula reflecting
