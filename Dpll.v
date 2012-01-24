@@ -177,7 +177,11 @@ Eval compute in setClauseSimple ((true, 0) :: (false, 1) :: nil) (false, 1).
 
 (** It's useful to have this strongly-specified nilness check. *)
 Definition isNil : forall (A : Set) (ls : list A), {ls = nil} + {True}.
-  destruct ls; eauto.
+refine (fun A ls =>
+  match ls with
+    | nil => left _ _
+    | _ => right _ _
+  end); reflexivity.
 Defined.
 Implicit Arguments isNil [A].
 
@@ -227,7 +231,10 @@ Definition setFormula : forall (fm : formula) (l : lit),
       | cl :: fm' =>
 	match setClause cl l with
           | !!          => fm'' <-- setFormula fm' l; [|| fm'' ||]
-          | [|| cl' ||] => fm'' <-- setFormula fm' l; [|| cl'::fm'' ||]
+          | [|| cl' ||] =>
+            if isNil cl'
+              then !!
+              else fm'' <-- setFormula fm' l; [|| cl'::fm'' ||]
         end
     end); clear setFormula; magic_solver.
 Defined.
@@ -288,6 +295,7 @@ Definition simpleSat: forall (bound : nat) (fm : formula),
   refine (fix simpleSat (bound : nat) (fm : formula)
     : option ({al : alist | satFormula fm (interp_alist al)}
       + {forall a, ~satFormula fm a}) :=
+    if isNil fm then Some [|| nil ||] else
     match bound with
       | O => None
       | S bound' =>
@@ -346,6 +354,21 @@ Definition simpleSat: forall (bound : nat) (fm : formula),
     [assert (satFormula fm (upd a l))
       | assert (satFormula fm (upd a (negate l)))]; firstorder.
 Defined.
+
+Definition simpleSatSimple (bound : nat) (fm : formula) :=
+  match simpleSat bound fm with
+    | None => None
+    | Some (inleft (exist a _)) => Some (Some a)
+    | Some (inright _) => Some None
+  end.
+
+Eval compute in simpleSatSimple 100 nil.
+Eval compute in simpleSatSimple 100 (((true, 0) :: nil) :: nil).
+Eval compute in simpleSatSimple 100 (((true, 0) :: nil) :: ((false, 0) :: nil) :: nil).
+Eval compute in simpleSatSimple 100 (((true, 0) :: (false, 1) :: nil) :: ((true, 1) :: nil) :: nil).
+Eval compute in simpleSatSimple 100 (((true, 0) :: (false, 1) :: nil) :: ((true, 1) :: (false, 0) :: nil) :: nil).
+Eval compute in simpleSatSimple 100 (((true, 0) :: (false, 1) :: nil) :: ((false, 0) :: (false, 0) :: nil) :: ((true, 1) :: nil) :: nil).
+Eval compute in simpleSatSimple 100 (((false, 0) :: (true, 1) :: nil) :: ((false, 1) :: (true, 0) :: nil) :: nil).
 
 (** Challenge 3: Write this code that either finds a unit clause in a formula
   or declares that there are none.
@@ -543,6 +566,14 @@ Eval compute in boundedSatSimple 100 (((true, 0) :: (false, 1) :: nil) :: ((true
 Eval compute in boundedSatSimple 100 (((true, 0) :: (false, 1) :: nil) :: ((true, 1) :: (false, 0) :: nil) :: nil).
 Eval compute in boundedSatSimple 100 (((true, 0) :: (false, 1) :: nil) :: ((false, 0) :: (false, 0) :: nil) :: ((true, 1) :: nil) :: nil).
 Eval compute in boundedSatSimple 100 (((false, 0) :: (true, 1) :: nil) :: ((false, 1) :: (true, 0) :: nil) :: nil).
+
+Eval compute in boundedSatSimple 100 nil = simpleSatSimple 100 nil.
+Eval compute in boundedSatSimple 100 (((true, 0) :: nil) :: nil) = simpleSatSimple 100 (((true, 0) :: nil) :: nil).
+Eval compute in boundedSatSimple 100 (((true, 0) :: nil) :: ((false, 0) :: nil) :: nil) = simpleSatSimple 100 (((true, 0) :: nil) :: ((false, 0) :: nil) :: nil).
+Eval compute in boundedSatSimple 100 (((true, 0) :: (false, 1) :: nil) :: ((true, 1) :: nil) :: nil) = simpleSatSimple 100 (((true, 0) :: (false, 1) :: nil) :: ((true, 1) :: nil) :: nil).
+Eval compute in boundedSatSimple 100 (((true, 0) :: (false, 1) :: nil) :: ((true, 1) :: (false, 0) :: nil) :: nil) = simpleSatSimple 100 (((true, 0) :: (false, 1) :: nil) :: ((true, 1) :: (false, 0) :: nil) :: nil).
+Eval compute in boundedSatSimple 100 (((true, 0) :: (false, 1) :: nil) :: ((false, 0) :: (false, 0) :: nil) :: ((true, 1) :: nil) :: nil) = simpleSatSimple 100 (((true, 0) :: (false, 1) :: nil) :: ((false, 0) :: (false, 0) :: nil) :: ((true, 1) :: nil) :: nil).
+Eval compute in boundedSatSimple 100 (((false, 0) :: (true, 1) :: nil) :: ((false, 1) :: (true, 0) :: nil) :: nil) = simpleSatSimple 100 (((false, 0) :: (true, 1) :: nil) :: ((false, 1) :: (true, 0) :: nil) :: nil).
 
 (** We can extract an OCaml version of [boundedSat]: *)
 Recursive Extraction boundedSat.
