@@ -635,7 +635,13 @@ Lemma subst_open_rec : forall e1 e2 u (x : atom) k,
   lc u ->
   [x ~> u] ({k ~> e2} e1) = {k ~> [x ~> u] e2} ([x ~> u] e1).
 Proof.
-  (* OPTIONAL EXERCISE *) Admitted.
+  induction e1; intros e2 u x k H; simpl in *; f_equal; auto.
+  Case "bvar".
+    destruct (k == n); auto.
+  Case "fvar".
+    destruct (a == x); subst; auto.
+    apply open_rec_lc; auto. 
+Qed.
 
 
 (** *** Exercise [subst_open_var] *)
@@ -654,7 +660,11 @@ Lemma subst_open_var : forall (x y : atom) u e,
   lc u ->
   open ([x ~> u] e) y = [x ~> u] (open e y).
 Proof.
-  (* FILL IN HERE (and delete "Admitted") *) Admitted.
+  intros x y u e Neq H.
+  unfold open.
+  rewrite subst_open_rec; auto.
+  rewrite subst_neq_var; auto.
+Qed.
 
 (** *** Take-home Exercise [subst_intro] *)
 
@@ -671,7 +681,20 @@ Lemma subst_intro : forall (x : atom) u e,
   x `notin` (fv e) ->
   open e u = [x ~> u](open e x).
 Proof.
-  (* OPTIONAL EXERCISE *) Admitted.
+  intros x u e FV. unfold open. generalize 0. induction e; intro n0; simpl.
+  Case "bvar".
+    destruct (n0 == n).
+    rewrite subst_eq_var. auto.
+    simpl. auto.
+  Case "fvar".
+    destruct (a == x). subst. simpl in FV. fsetdec. auto.
+  Case "abs".
+    f_equal. simpl in FV. apply IHe. auto.
+  Case "app".
+    simpl in FV. f_equal.
+    apply IHe1. auto.
+    apply IHe2. auto.
+Qed.
 
 End BasicOperations.
 
@@ -823,14 +846,26 @@ Lemma subst_open_rec_c : forall e1 e2 u (x : atom) k,
   lc_c u ->
   [x ~> u] ({k ~> e2} e1) = {k ~> [x ~> u] e2} ([x ~> u] e1).
 Proof.
-(* OPTIONAL EXERCISE *) Admitted.
+ induction e1; intros e2 u x k H; simpl in *; f_equal; auto.
+  Case "bvar".
+    destruct (k == n); auto.
+  Case "fvar".
+    destruct (a == x); subst; auto.
+    apply open_rec_lc_c; auto. 
+Qed.
+
 
 Lemma subst_open_var_c : forall (x y : atom) u e,
   y <> x ->
   lc_c u ->
   open ([x ~> u] e) y = [x ~> u] (open e y).
 Proof.
-  (* OPTIONAL EXERCISE *) Admitted.
+  intros x y u e Neq H.
+  unfold open.
+  rewrite subst_open_rec_c; auto.
+  rewrite subst_neq_var; auto.
+Qed.
+
 
 (* Exercise [subst_lc_c]:
 
@@ -848,15 +883,16 @@ Lemma subst_lc_c : forall (x : atom) u e,
   lc_c ([x ~> u] e).
 Proof.
   intros x u e He Hu.
-  induction He.
+  induction He; simpl.
   Case "lc_var_c".
-   simpl.
-   destruct (x0 == x).
-     auto.
-     auto.
+   destruct (x0 == x); auto.
   Case "lc_abs_c".
-    simpl.
-    (* FILL IN HERE (and delete "Admitted") *) Admitted.
+    apply lc_abs_c with (L := L `union` singleton x).
+    intros x0 Fr.
+    rewrite subst_open_var_c; auto.
+  Case "lc_app_c".
+    auto.
+Qed.
 
 End CofiniteQuantification.
 
