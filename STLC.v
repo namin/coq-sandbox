@@ -120,18 +120,17 @@ Definition demo_rep2 := abs typ_base (abs typ_base (app 0 1)).
 
 *)
 
-(** <<
-
 Definition two :=
-  (* FILL IN HERE *)
+  abs (typ_arrow typ_base typ_base) (abs typ_base (app 1 (app 1 0))).
 
 Definition COMB_K :=
-  (* FILL IN HERE *)
+  abs typ_base (abs typ_base 1).
 
 Definition COMB_S :=
-   (* FILL IN HERE *)
-
->> *)
+  abs (typ_arrow typ_base (typ_arrow typ_base typ_base))
+    (abs (typ_arrow typ_base typ_base)
+      (abs typ_base
+        (app (app 2 0) (app 1 0)))).
 
 (** There are two important advantages of the locally nameless
     representation:
@@ -229,12 +228,24 @@ Qed.
 Lemma subst_eq_var: forall (x : atom) u,
   [x ~> u]x = u.
 Proof.
-  (* OPTIONAL EXERCISE *) Admitted.
-
+  simpl. intros.
+  destruct (x==x).
+  Case "left".
+    auto.
+  Case "right".
+    destruct n. auto.
+Qed.
+  
 Lemma subst_neq_var : forall (x y : atom) u,
   y <> x -> [x ~> u]y = y.
 Proof.
-  (* OPTIONAL EXERCISE *) Admitted.
+  simpl. intros.
+  destruct (y==x).
+  Case "left".
+    destruct H. auto.
+  Case "right".
+    auto.
+Qed.
 
 
 (*************************************************************************)
@@ -306,7 +317,13 @@ Qed.
 Lemma subst_fresh : forall (x : atom) e u,
   x `notin` fv e -> [x ~> u] e = e.
 Proof.
-  (* FILL IN HERE (and delete "Admitted") *) Admitted.
+  induction e; intros.
+  Case "bvar". fsetdec.
+  Case "fvar". simpl in *. destruct (a == x); fsetdec.
+  Case "abs".  simpl in *. rewrite IHe; auto.
+  Case "app".  simpl in *. rewrite IHe1. rewrite IHe2.
+    reflexivity. fsetdec. fsetdec.
+Qed.
 
 (* Take-home Demo: Prove that free variables are not introduced by
    substitution.
@@ -412,7 +429,8 @@ Lemma demo_open :
   open (app (abs typ_base (app 1 0)) 0) Y =
        (app (abs typ_base (app Y 0)) Y).
 Proof.
-Admitted.
+  unfold open. simpl. reflexivity.
+Qed.
 (* HINT for demo: To show the equality of the two sides below, use the
    tactics [unfold], which replaces a definition with its RHS and
    reduces it to head form, and [simpl], which reduces the term the
