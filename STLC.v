@@ -1540,7 +1540,15 @@ Proof.
   intros E e e' T H.
   generalize dependent e'.
   induction H; intros e' J.
-(* OPTIONAL EXERCISE *) Admitted.
+  Case "typing_var_c". inversion J.
+  Case "typing_abs_c". inversion J.
+  Case "typing_app_c". inversion J; subst; eauto.
+    SCase "eval_beta".
+      inversion H; subst.
+      pick fresh y.
+      rewrite (subst_intro y); auto.
+      eapply typing_c_subst_simple; auto.
+Qed.
 
 (*************************************************************************)
 (** * Progress *)
@@ -1602,7 +1610,27 @@ Proof.
 
   induction H; subst.
 
-(* FILL IN HERE (and delete "Admitted") *) Admitted.
+  Case "typing_var_c". inversion H1.
+  
+  Case "typing_abs_c".
+    left. apply value_abs_c.
+    eapply typing_c_to_lc_c; eauto.
+
+  Case "typing_app_c".
+    right.
+    destruct IHtyping_c1 as [V1 | [e1' Eval1]]; auto.
+      SCase "e1 is a value".
+      destruct IHtyping_c2 as [V2 | [e2' Eval2]]; auto.
+        SSCase "e2 is a value".
+          inversion V1; subst. exists (open e e2); auto.
+        SSCase "e2 is not a value".
+          exists (app e1 e2'); auto.
+      SCase "e1 is not a value".
+        exists (app e1' e2); auto.
+        apply eval_app_1_c.  
+        eapply typing_c_to_lc_c; eauto.
+        assumption.
+Qed.
 
 
 (*************************************************************************)
