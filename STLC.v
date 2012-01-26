@@ -1267,9 +1267,17 @@ Proof.
   remember (G ++ E) as E'.
   generalize dependent G.
   induction H; intros G Eq Uniq; subst.
- (* FILL IN HERE (and delete "Admitted") *) Admitted.
-
-     
+  Case "typing_var_c". apply typing_var_c; auto.
+  Case "typing_abs_c".
+    pick fresh x and apply typing_abs_c.
+    rewrite_env (((x ~ T1) ++ G) ++ F++ E).
+    apply H0; auto.
+    simpl_env. apply uniq_push; auto.
+  Case "typing_app_c". eapply typing_app_c.
+    apply IHtyping_c1; auto.
+    apply IHtyping_c2; auto.
+Qed.
+    
 
 (** *** Example
 
@@ -1343,7 +1351,19 @@ Lemma typing_subst_var_case : forall (E F : env) u S T (z x : atom),
 Proof.
   intros E F u S T z x H J K.
   simpl.
- (* FILL IN HERE (and delete "Admitted") *) Admitted.
+  destruct (x == z).
+  Case "x = z".
+    subst.
+    assert (T = S). eapply binds_mid_eq. apply H. apply J.
+    subst.
+    apply typing_c_weakening.
+      apply K. eapply uniq_remove_mid. apply J.
+  Case "x <> z".
+    subst. apply typing_var_c.
+      eapply uniq_remove_mid. apply J.
+      eapply binds_remove_mid. apply H.
+      assumption.
+Qed.
 
 (** *** Note
 
@@ -1391,8 +1411,24 @@ Lemma typing_c_subst : forall (E F : env) e u S T (z : atom),
   typing_c E u S ->
   typing_c (F ++ E) ([z ~> u] e) T.
 Proof.
-(* FILL IN HERE (and delete "Admitted") *) Admitted.
-
+  intros E F e u S T z He Hu.
+  remember (F ++ (z ~ S) ++ E) as E'.
+  generalize dependent F.
+  induction He; intros F Eq; subst.
+  Case "typing_var_c".
+    eapply typing_subst_var_case with (S := S); assumption.
+  Case "typing_abs_c".
+    simpl.
+    pick fresh y and apply typing_abs_c.
+    rewrite subst_open_var_c.
+    rewrite_env (((y ~ T1) ++ F) ++ E).
+    apply H0. auto. simpl_env. auto. auto. eapply typing_c_to_lc_c. apply Hu.
+  Case "typing_app_c".
+    simpl.
+    eapply typing_app_c.
+    apply IHHe1. auto.
+    apply IHHe2. auto.
+Qed.
         
 (** *** Exercise
 
@@ -1408,7 +1444,10 @@ Lemma typing_c_subst_simple : forall (E : env) e u S T (z : atom),
   typing_c E u S ->
   typing_c E ([z ~> u] e) T.
 Proof.
-(* FILL IN HERE (and delete "Admitted") *) Admitted.
+  intros E e u S T z H J.
+  rewrite_env (nil ++ E).
+  eapply typing_c_subst. apply H. apply J.
+Qed.
 
 (*************************************************************************)
 (** * Values and Evaluation *)
