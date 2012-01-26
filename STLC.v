@@ -1580,7 +1580,7 @@ Qed.
 
        - Use [inversion] to rule out impossible cases.
 
-       - The lemma [typing_to_lc_c] will be useful for reasoning
+       - The lemma [typing_c_to_lc_c] will be useful for reasoning
          about local closure.
 
        - In the [typing_app_c] case:
@@ -1638,7 +1638,7 @@ Qed.
 (*************************************************************************)
 
 (* Substitution and weakening together give us a property we call
-   renaming: (see [typing_c_rename below] that we can change the name
+   renaming: (see [typing_c_rename] below that we can change the name
    of the variable used to open an expression in a typing
    derivation. In practice, this means that if a variable is not
    "fresh enough" during a proof, we can use this lemma to rename it
@@ -1780,7 +1780,13 @@ Qed.
 (* Take-home exercise. *)
 Lemma lc_c_to_lc : forall e, lc_c e -> lc e.
 Proof.
-(* OPTIONAL EXERCISE *) Admitted.
+  intros e LCC.
+  induction LCC; auto.
+  Case "lc_abs_c".
+  pick fresh x.
+  apply lc_abs with (x := x); auto.
+Qed.
+  
 
 (** Correspondence of typing and typing_c *)
 
@@ -1799,7 +1805,13 @@ Qed.
 Lemma typing_c_to_typing : forall E e T,
   typing_c E e T -> typing E e T.
 Proof.
-(* OPTIONAL EXERCISE *) Admitted.
+  intros E e T H.
+  induction H; eauto.
+  Case "typing_abs_c".
+    pick fresh x.
+    apply typing_abs with (x := x); auto.
+Qed.
+  
 
 (* Demo. The pattern [eauto using lemma] is a powerful way to completely
    automate all of the cases of a simple proof. *)
@@ -1814,7 +1826,9 @@ Qed.
 Lemma value_c_to_value : forall e,
   value_c e -> value e.
 Proof.
-  (* OPTIONAL EXERCISE *) Admitted.
+  intros e H.
+  induction H; eauto using lc_c_to_lc.
+Qed.
 
 (* Demo: We can do the same trick with several lemmas. *)
 Lemma eval_to_eval_c : forall e e',
@@ -1828,7 +1842,9 @@ Qed.
 Lemma eval_c_to_eval : forall e e',
   eval_c e e' -> eval e e'.
 Proof.
-  (* OPTIONAL EXERCISE *) Admitted.
+  intros e e' H.
+  induction H; eauto using lc_c_to_lc, value_c_to_value.
+Qed.
 
 Lemma preservation : forall E e e' T,
   typing E e T ->
