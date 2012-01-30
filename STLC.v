@@ -1899,7 +1899,11 @@ Lemma open_abs : forall e u T1,
   lc u ->
   lc (open e u).
 Proof.
-  (* OPTIONAL EXERCISE *) Admitted.
+  intros e u T1 LCabs LCu.
+  inversion LCabs; subst.
+  rewrite (@subst_intro x); auto.
+  apply subst_lc; auto.
+Qed.
 
 
 (* Take-home exercise:
@@ -1910,17 +1914,20 @@ Proof.
 Lemma value_to_lc : forall e,
   value e -> lc e.
 Proof.
-  (* OPTIONAL EXERCISE *) Admitted.
+  intros e H. induction H; auto.
+Qed.
 
 Lemma eval_to_lc : forall e1 e2,
   eval e1 e2 -> lc e1 /\ lc e2.
 Proof.
-  (* OPTIONAL EXERCISE *) Admitted.
+  intros e1 e2 H. induction H; try inversion IHeval; split; eauto using value_to_lc, open_abs.
+Qed.
 
 Lemma typing_to_lc : forall E e T,
   typing E e T -> lc e.
 Proof.
-  (* OPTIONAL EXERCISE *) Admitted.
+  intros E e T H. induction H; eauto.
+Qed.
 
 (*************************************************************************)
 (** * Decidability of Typechecking *)
@@ -1951,7 +1958,19 @@ Lemma typing_c_unique : forall E e T1 T2,
   typing_c E e T2 ->
   T1 = T2.
 Proof.
-(* OPTIONAL EXERCISE *) Admitted.
+  intros E e T1 T2 Typ1 Typ2.
+  generalize dependent T2.
+  induction Typ1; intros T' Typ'; inversion Typ'; subst; eauto.
+  Case "typing_var_c".
+    eapply binds_unique; eauto.
+  Case "typing_abs_c".
+    f_equal; eauto.
+    pick fresh x.
+    apply (H0 x); eauto.
+  Case "typing_app_c".
+    assert (typ_arrow T1 T2 = typ_arrow T0 T') by auto.
+    inversion H; eauto.
+Qed.
 
 
 (* A property P is decidable if we can show the proposition P \/ ~P. *)
