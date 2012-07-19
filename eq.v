@@ -33,14 +33,17 @@ id'_ind
        (forall x : A, P x x) -> forall y y0 : A, id' A y y0 -> P y y0
 *)
 
+Definition J (A:Type)(x y: A)(h: id' A x y)(P: A -> A -> Prop)(Q: forall x : A, P x x): P x y :=
+  id'_ind A P Q x y h.
+
 Definition id'_sym (A:Type)(x y:A)(h : id' A x y) : id' A y x :=
-  id'_ind A (fun u v => id' A v u) (fun z => refl' A z) x y h.
+  J A x y h (fun u v => id' A v u) (fun z => refl' A z).
 
 Definition id'_trans (A:Type)(x y z:A)(h : id' A x y)(g : id' A y z) : id' A x z :=
-  id'_ind A (fun u v => id' A v z -> id' A u z) (fun z i => i) x y h g.
+  J A x y h (fun u v => id' A v z -> id' A u z) (fun z i => i) g.
 
 Definition id'_subst (A:Type)(B: A -> Prop)(x y:A)(h : id' A x y)(g : B x) : B y :=
-  id'_ind A (fun u v => B u -> B v) (fun z i => i) x y h g.
+  J A x y h (fun u v => B u -> B v) (fun z i => i) g.
 
 Definition id'_resp' (A:Type)(B: Prop)(x y:A)(h : id' A x y)(g: A -> B) : id' B (g x) (g y) :=
-  id'_ind A (fun u v => forall q, id' B (q u) (q v)) (fun z q => refl' B (q z)) x y h g.
+  J A x y h (fun u v => forall q, id' B (q u) (q v)) (fun z q => refl' B (q z)) g.
