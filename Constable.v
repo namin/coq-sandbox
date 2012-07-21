@@ -26,6 +26,16 @@ Proof.
   left; assumption.
 Qed.
 
+Definition constable_3'' : forall P Q,
+  ~(P /\ Q) /\ (P \/ ~P) /\ (Q \/ ~Q) ->
+  ~P \/ ~Q := fun p q h =>
+    match h with
+      | conj na (conj (or_intror np) _) =>
+        or_introl _ np
+      | conj na (conj (or_introl yp) _) =>
+        or_intror _ (fun yq => na (conj yp yq))
+    end.
+
 Theorem constable_4 : forall (X:Type) (P: X -> Prop) (C: Prop),
   (exists x, (P x -> C)) -> (forall x, (P x)) -> C.
 Proof.
