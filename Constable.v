@@ -43,3 +43,9 @@ Proof.
   apply Hex'. apply Hal.
 Qed.
 
+Definition constable_4' : forall (X:Type) (P: X -> Prop) (C: Prop),
+  (exists x, (P x -> C)) -> (forall x, (P x)) -> C :=
+  fun X P C Hex Hal =>
+    match Hex with
+      | ex_intro x' Hex' => Hex' (Hal x')
+    end.
