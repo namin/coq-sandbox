@@ -16,6 +16,16 @@ Proof.
   ].
 Qed.
 
+Theorem constable_3' : forall P Q,
+  ~(P /\ Q) /\ (P \/ ~P) /\ (Q \/ ~Q) ->
+  ~P \/ ~Q.
+Proof.
+  intros P Q H.
+  inversion H as [H' [[HP | HP'] DQ]].
+  assert (HQ': ~Q). intros HQ. apply H'. split; assumption. right; assumption.
+  left; assumption.
+Qed.
+
 Theorem constable_4 : forall (X:Type) (P: X -> Prop) (C: Prop),
   (exists x, (P x -> C)) -> (forall x, (P x)) -> C.
 Proof.
