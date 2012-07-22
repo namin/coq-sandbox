@@ -210,19 +210,35 @@ Section fundef.
     unfold homfun_map. simpl.
     unfold homfun_mor, homfun_ob.
     unfold Ext. simpl. intros h. simpl.
-    unfold homfun_mor1.
-    simpl. unfold Comp. unfold Cat_comp. simpl.
-    (* stuck *)
-    Admitted.
+    unfold homfun_mor1. simpl.
+
+    apply Trans with (y:=(((Hom_l g: @Hom Cat _ _) o (Hom_l f: @Hom Cat _ _)) o h o Hom_r f o Hom_r g)).
+    apply Comp_l. apply Refl.
+
+    remember ((Hom_l g: @Hom Cat _ _) o (Hom_l f: @Hom Cat _ _)) as init.
+    remember ((Hom_r f) o (Hom_r g)) as fin.
+
+    apply Trans with (y:=((Hom_l g: @Hom Cat _ _) o (Hom_l f: @Hom Cat _ _)) o (h o Hom_r f) o Hom_r g).
+    rewrite Heqinit. apply Comp_l. rewrite Heqfin. apply Ass.
+    remember (h o Hom_r f) as hthen.
+
+    apply Trans with (y:=((((Hom_l g: @Hom Cat _ _) o (Hom_l f: @Hom Cat _ _)) o hthen) o Hom_r g)).
+    rewrite <- Heqinit. apply Ass.
+    apply Trans with (y:=(((((Hom_l g: @Hom Cat _ _) o (Hom_l f: @Hom Cat _ _) o hthen) o Hom_r g)))).
+    apply Comp_r. apply Ass1.
+    remember ((Hom_l f: @Hom Cat _ _) o hthen) as hround.
+    apply Ass1.
+  Qed.
   Lemma homfun_id_law : Fid_law homfun_map.
   Proof.
     unfold Fid_law. simpl.
     unfold Ext. simpl.
-    unfold Id_fun. simpl.
     unfold homfun_mor1, homfun_ob.
-    intros b f. unfold Id_PROD. simpl.
-    (* stuck *)
-    Admitted.
+    intros b f. unfold Id_PROD. simpl. unfold Id_fun.
+    apply Trans with (y:=f o Id (c:=Cat) (Ob_r b)).
+    apply Idl.
+    apply Idr1.
+  Qed.
 
   Canonical Structure hom_Fun := Build_Functor homfun_comp_law homfun_id_law.
 
@@ -234,5 +250,3 @@ Check hom_Fun.
 hom_Fun
      : forall Cat : Category, Functor (PROD (Dual Cat) Cat) SET
 *)
-
-
