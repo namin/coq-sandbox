@@ -7,7 +7,7 @@ Implement the DPLL satisfiability decision procedure for boolean formulas in con
 with a dependent type that guarantees its correctness.
 An example of a reasonable type for this function would be
 [forall f : formula, {truth : tvals | formulaTrue truth f} + {][forall truth, ~ formulaTrue truth f}].
-Implement at least %``%#"#the basic backtracking algorithm#"#%''% as defined here:
+Implement at least the basic backtracking algorithm as defined here:
   http://en.wikipedia.org/wiki/DPLL_algorithm
 It might also be instructive to implement the unit propagation and pure literal elimination optimizations described there
 or some other optimizations that have been used in modern SAT solvers.
