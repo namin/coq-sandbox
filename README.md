@@ -14,4 +14,4 @@ updated][dot-metalib].
 [sf]: http://www.cis.upenn.edu/~bcpierce/sf/
 [coqart]: http://www.labri.fr/perso/casteran/CoqArt/index.html
 [metalib]: http://www.cis.upenn.edu/~plclub/metalib/
-[dot-metalib]: https://github.com/namin/dot/tree/master/src/coq/metalib
+[dot-metalib]: https://github.com/namin/dot/tree/fool/src/coq/metalib
